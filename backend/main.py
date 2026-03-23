@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from bson import ObjectId
+from passlib.context import CryptContext
 from backend.database import get_users_collection, get_history_collection, create_indexes
 from backend.models import User, TextData
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 app = FastAPI()
 
@@ -12,28 +15,27 @@ create_indexes()
 def signup(user: User):
     users_col = get_users_collection()
     try:
+        hashed_password = pwd_context.hash(user.password)
         users_col.insert_one({
             "username": user.username,
-            "password": user.password,
+            "password": hashed_password,
             "display_name": user.display_name or user.username
         })
         return {"status": "success"}
-    except Exception as e:
+    except Exception:
         return {"status": "error", "message": "User already exists"}
 
 
 @app.post("/login")
 def login(user: User):
     users_col = get_users_collection()
-    user_doc = users_col.find_one({
-        "username": user.username,
-        "password": user.password
-    })
-    if user_doc:
+    user_doc = users_col.find_one({"username": user.username})
+    if user_doc and pwd_context.verify(user.password, user_doc.get("password", "")):
         return {
             "status": "success",
             "display_name": user_doc.get("display_name", user.username)
         }
+
     return {"status": "fail"}
 
 
