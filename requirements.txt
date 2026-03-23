@@ -1,0 +1,9 @@
+streamlit
+transformers
+torch
+textstat
+PyPDF2
+requests
+fastapi
+uvicorn
+pymongo
